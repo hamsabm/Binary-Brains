@@ -1,0 +1,122 @@
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Boolean, DateTime, select, insert, func, desc, text
+from sqlalchemy.sql import and_
+import datetime
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./war_room.db")
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+metadata = MetaData()
+
+attack_logs = Table(
+    "attack_logs",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("log_id", String, unique=True),
+    Column("ip", String),
+    Column("event", String),
+    Column("status", String),
+    Column("attack_type", String),
+    Column("timestamp", String),
+)
+
+detections = Table(
+    "detections",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("log_id", String),
+    Column("threat", Boolean),
+    Column("confidence", Integer),
+    Column("reason", String),
+    Column("timestamp", String),
+)
+
+responses = Table(
+    "responses",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("log_id", String),
+    Column("action", String),
+    Column("message", String),
+    Column("status", String),
+    Column("timestamp", String),
+)
+
+def init_db():
+    metadata.create_all(engine)
+
+def insert_log(log_dict: dict):
+    with engine.connect() as conn:
+        try:
+            stmt = insert(attack_logs).values(**log_dict)
+            conn.execute(stmt)
+            conn.commit()
+        except Exception:
+            # Ignore if log_id exists
+            pass
+
+def insert_detection(log_id: str, det: dict):
+    with engine.connect() as conn:
+        stmt = insert(detections).values(log_id=log_id, **det)
+        conn.execute(stmt)
+        conn.commit()
+
+def insert_response(log_id: str, resp: dict):
+    with engine.connect() as conn:
+        stmt = insert(responses).values(log_id=log_id, **resp)
+        conn.execute(stmt)
+        conn.commit()
+
+def get_recent_logs(limit=50):
+    with engine.connect() as conn:
+        query = (
+            select(
+                attack_logs,
+                detections.c.threat,
+                detections.c.confidence,
+                responses.c.action
+            )
+            .select_from(
+                attack_logs
+                .outerjoin(detections, attack_logs.c.log_id == detections.c.log_id)
+                .outerjoin(responses, attack_logs.c.log_id == responses.c.log_id)
+            )
+            .order_by(desc(attack_logs.c.id))
+            .limit(limit)
+        )
+        result = conn.execute(query)
+        return [dict(row._mapping) for row in result]
+
+def get_stats():
+    with engine.connect() as conn:
+        total_events = conn.execute(select(func.count()).select_from(attack_logs)).scalar()
+        threats_detected = conn.execute(
+            select(func.count())
+            .select_from(detections)
+            .where(detections.c.threat == True)
+        ).scalar()
+        ips_blocked = conn.execute(
+            select(func.count())
+            .select_from(responses)
+            .where(responses.c.action == 'block_ip')
+        ).scalar()
+        sql_count = conn.execute(
+            select(func.count())
+            .select_from(attack_logs)
+            .where(attack_logs.c.attack_type == 'sql_injection')
+        ).scalar()
+        brute_count = conn.execute(
+            select(func.count())
+            .select_from(attack_logs)
+            .where(attack_logs.c.attack_type == 'brute_force')
+        ).scalar()
+
+        return {
+            "total_events": total_events or 0,
+            "threats_detected": threats_detected or 0,
+            "ips_blocked": ips_blocked or 0,
+            "sql_count": sql_count or 0,
+            "brute_count": brute_count or 0
+        }

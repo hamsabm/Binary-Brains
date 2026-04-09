@@ -1,0 +1,8 @@
+frontend/node_modules/
+frontend/build/
+backend/__pycache__/
+backend/*.pyc
+backend/war_room.db
+war_room.db
+backend/*.db-journal
+.DS_Store

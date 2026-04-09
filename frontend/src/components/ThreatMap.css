@@ -1,0 +1,114 @@
+.threat-map-panel {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(17, 24, 39, 0.9));
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 0 25px rgba(34, 211, 238, 0.08), inset 0 0 18px rgba(56, 189, 248, 0.05);
+}
+
+.threat-map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.threat-map-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #dbeafe;
+  letter-spacing: 0.3px;
+}
+
+.threat-map-header p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.threat-map-status {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.threat-map-status.online {
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.4);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.2);
+}
+
+.threat-map-status.offline {
+  color: #f43f5e;
+  border-color: rgba(244, 63, 94, 0.4);
+}
+
+.threat-map-shell {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(30, 41, 59, 0.9);
+}
+
+.threat-map-canvas {
+  height: 100%;
+  width: 100%;
+  background: #0b1220;
+}
+
+.leaflet-container {
+  background: #020617;
+  filter: brightness(1) contrast(1.05);
+  border-radius: 16px;
+}
+
+.leaflet-control-zoom {
+  background: #020617 !important;
+  border: 1px solid #22c55e !important;
+}
+
+.leaflet-control-zoom a {
+  color: #22c55e !important;
+  background: #020617 !important;
+}
+
+.leaflet-tooltip {
+  background: rgba(3, 7, 18, 0.94) !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #1e293b !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.35) !important;
+}
+
+.threat-marker.sql {
+  filter: drop-shadow(0 0 6px rgba(255, 45, 117, 0.85));
+}
+
+.threat-marker.brute {
+  filter: drop-shadow(0 0 6px rgba(255, 159, 28, 0.85));
+}
+
+.threat-path {
+  stroke-dasharray: 8 8;
+  animation: pathMove 1.8s linear infinite;
+}
+
+.leaflet-interactive {
+  transform-origin: center;
+}
+
+.threat-marker.leaflet-interactive {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.3); }
+  100% { opacity: 0.6; transform: scale(1); }
+}
+
+@keyframes pathMove {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -32; }
+}
