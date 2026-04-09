@@ -68,7 +68,7 @@ const ThreatGlobe = () => {
                      <div className={`w-3 h-3 rounded-full ${connected ? 'bg-cyan-400 shadow-[0_0_15px_#22d3ee]' : 'bg-pink-500 shadow-[0_0_15px_#ec4899]'} animate-pulse`} />
                      <div className={`absolute -inset-1 rounded-full ${connected ? 'bg-cyan-500/20' : 'bg-pink-500/20'} animate-ping`} />
                   </div>
-                  Global <span className="vibrant-gradient-text glow-text">Threat Interceptor</span>
+                  WarRoomX <span className="vibrant-gradient-text glow-text">Tactical Hub</span>
                </h1>
                <p className="text-[10px] text-slate-500 font-bold mono tracking-[0.4em] uppercase pl-8 opacity-70">
                   Real-time Neural Network Vector Mapping // Section_Alpha_04

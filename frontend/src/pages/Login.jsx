@@ -53,7 +53,7 @@ const Login = () => {
               <Shield className="text-white" size={40} />
            </div>
            <h1 className="text-4xl font-black text-white tracking-widest text-center">
-              CORE_<span className="vibrant-gradient-text glow-text">SOC</span>
+              WarRoomX
            </h1>
            <p className="text-slate-500 text-[10px] uppercase font-black tracking-[0.5em] mt-2 opacity-60">
               Neural Command Interface // V5.2

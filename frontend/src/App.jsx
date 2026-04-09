@@ -55,7 +55,7 @@ const Sidebar = () => {
         <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center glow-blue group-hover:rotate-12 transition-transform duration-500">
            <ShieldCheck className="text-white" size={18} />
         </div>
-        <span className="tracking-tighter text-white group-hover:translate-x-1 transition-transform duration-300">CORE_SOC</span>
+        <span className="tracking-tighter text-white group-hover:translate-x-1 transition-transform duration-300">WarRoomX</span>
       </div>
 
       <nav className="flex-1 space-y-6">
