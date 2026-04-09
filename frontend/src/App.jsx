@@ -102,6 +102,11 @@ const Layout = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
+      {/* GLOBAL HUD WRAPPERS */}
+      <div className="mesh-gradient" />
+      <div className="cyber-perspective-grid" />
+      <div className="scanline-overlay" />
+      
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />

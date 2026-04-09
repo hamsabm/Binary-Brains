@@ -65,7 +65,7 @@ const Dashboard = () => {
          </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
+      <div className="grid grid-cols-12 gap-8 stagger-in">
          
          {/* LEFT COLUMN: ATTACK ENGINE (Offensive) */}
          <div className="col-span-12 lg:col-span-6 flex flex-col gap-6">
@@ -77,8 +77,8 @@ const Dashboard = () => {
             </div>
             
             <div className="grid grid-cols-2 gap-6">
-               <EngineKPI label="Ingress Traffic" value={stats.total_events} sub="Total Attack Vectors" color="pink" icon={<Activity />} />
-               <EngineKPI label="Payload Velocity" value="2.4 MB/s" sub="Traffic Intensity" color="pink" icon={<Zap />} />
+               <EngineKPI label="Ingress Traffic" value={stats.total_events} sub="Total Attack Vectors" color="pink" icon={<Activity />} className="glow-border-pink" />
+               <EngineKPI label="Payload Velocity" value="2.4 MB/s" sub="Traffic Intensity" color="pink" icon={<Zap />} className="glow-border-pink" />
             </div>
 
             <div className="premium-card p-6 flex-1 min-h-[300px]">
@@ -114,8 +114,8 @@ const Dashboard = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-6">
-               <EngineKPI label="Threats Blocked" value={stats.threats_detected} sub="Neutralized Risks" color="cyan" icon={<ShieldAlert />} />
-               <EngineKPI label="Mitigation Rate" value={`${threatRatio}%`} sub="AI Success Index" color="cyan" icon={<Cpu />} />
+               <EngineKPI label="Threats Blocked" value={stats.threats_detected} sub="Neutralized Risks" color="cyan" icon={<ShieldAlert />} className="glow-border-cyan" />
+               <EngineKPI label="Mitigation Rate" value={`${threatRatio}%`} sub="AI Success Index" color="cyan" icon={<Cpu />} className="glow-border-cyan" />
             </div>
 
             <div className="premium-card p-6 flex-1 min-h-[300px] flex flex-col">
@@ -217,14 +217,14 @@ const Dashboard = () => {
   );
 };
 
-const EngineKPI = ({ label, value, sub, icon, color }) => {
+const EngineKPI = ({ label, value, sub, icon, color, className = "" }) => {
    const variants = {
       pink: 'border-pink-500/20 from-pink-500/5 to-transparent text-pink-500',
       cyan: 'border-cyan-500/20 from-cyan-500/5 to-transparent text-cyan-500'
    };
 
    return (
-      <div className={`premium-card p-6 bg-gradient-to-br ${variants[color]} flex flex-col gap-4 group transition-all duration-500 hover:-translate-y-1`}>
+      <div className={`premium-card p-6 bg-gradient-to-br ${variants[color]} flex flex-col gap-4 group transition-all duration-500 hover:-translate-y-1 ${className}`}>
          <div className="flex justify-between items-start">
             <div className={`p-2 bg-white/5 rounded-lg group-hover:scale-110 transition-transform ${variants[color].split(' ')[2]}`}>
                {React.cloneElement(icon, { size: 18 })}
