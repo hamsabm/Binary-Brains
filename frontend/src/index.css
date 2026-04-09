@@ -198,6 +198,71 @@ h1, h2, h3, h4, .premium-font {
   100% { top: 100%; }
 }
 
-.hero-gradient {
-  background: radial-gradient(circle at 50% 30%, rgba(125, 0, 255, 0.15), transparent 70%);
+/* Game UI: HP Bar Animation */
+@keyframes hp-pulse {
+  0% { transform: scaleX(1); filter: brightness(1); }
+  50% { transform: scaleX(0.98); filter: brightness(1.2); }
+  100% { transform: scaleX(1); filter: brightness(1); }
+}
+
+.hp-bar {
+  height: 8px;
+  background: #1e293b;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.05);
+  position: relative;
+}
+
+.hp-fill {
+  height: 100%;
+  background: linear-gradient(to right, #00eaff, #7d00ff);
+  box-shadow: 0 0 15px rgba(0,234,255,0.5);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hp-fill.danger {
+  background: linear-gradient(to right, #ff3366, #ff007f);
+  box-shadow: 0 0 15px rgba(255,51,102,0.5);
+}
+
+/* CRT Flicker */
+.crt-flicker {
+  animation: flicker 0.15s infinite;
+  opacity: 0.96;
+}
+
+@keyframes flicker {
+  0% { opacity: 0.95; }
+  5% { opacity: 0.85; }
+  10% { opacity: 0.95; }
+  15% { opacity: 0.9; }
+  25% { opacity: 0.95; }
+  30% { opacity: 1; }
+  100% { opacity: 0.95; }
+}
+
+/* Game Damage Flash */
+.damage-flash {
+  animation: damage 0.4s ease-out;
+}
+
+@keyframes damage {
+  0% { background-color: rgba(255, 51, 102, 0); }
+  20% { background-color: rgba(255, 51, 102, 0.2); }
+  100% { background-color: rgba(255, 51, 102, 0); }
+}
+
+/* Digital Rank Badge */
+.rank-badge {
+  background: rgba(0, 234, 255, 0.1);
+  border: 1px solid rgba(0, 234, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #00eaff;
 }
