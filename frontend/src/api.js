@@ -30,6 +30,8 @@ export const postChat = (message, include_context=true) => api.post('/ai/chat', 
 // ADVANCED ADD-ONS
 export const getPrediction = () => api.get('/intel/prediction');
 export const getGameStats = () => api.get('/gamified/stats');
-export const simulateFullCycle = () => api.get('/simulate/full_cycle');
+export const startSimulation = () => api.post('/simulate/start');
+export const stopSimulation = () => api.post('/simulate/stop');
+export const toggleSimulation = (active) => api.post(`/simulate/toggle?active=${active}`);
 
 export default api;

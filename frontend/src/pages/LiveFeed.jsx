@@ -12,7 +12,7 @@ import {
   RefreshCw,
   Info
 } from 'lucide-react';
-import { getStats, getFullCycle } from '../api';
+import { getStats, getFullCycle, startSimulation } from '../api';
 
 const LiveFeed = () => {
   const [connected, setConnected] = useState(false);
@@ -27,37 +27,36 @@ const LiveFeed = () => {
     const token = localStorage.getItem('access_token');
     if (!token) return;
 
-    const wsHost = window.location.hostname || "localhost";
+    const wsHost = "127.0.0.1";
     const ws = new WebSocket(`ws://${wsHost}:8000/ws/live?token=${encodeURIComponent(token)}`);
 
     ws.onopen = () => {
-      console.log("[WS] Secure connection established");
+      console.log("[WS] SECURE_HANDSHAKE_COMPLETE // Node: Operational");
       setConnected(true);
     };
 
     ws.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        console.log("[WS] Payload received:", payload);
+        console.log("[WS] INGRESS_PACKET_RECEIVED:", payload);
         
-        // Ensure new event has required fields
-        const newEvent = payload.event;
-        if (newEvent && Number.isFinite(newEvent.lat) && Number.isFinite(newEvent.lng)) {
-          setEvents(prev => [...prev.slice(-49), payload]);
+        // Ensure new event mapping is clean
+        if (payload && payload.event) {
+          setEvents(prev => [payload, ...prev].slice(0, 50));
           
           // Add to live log
           const logEntry = {
-            id: payload.log.log_id,
+            id: payload.log?.log_id || Date.now(),
             time: new Date().toLocaleTimeString(),
-            type: payload.log.attack_type,
-            ip: payload.log.ip,
-            status: payload.detection.threat ? 'THREAT' : 'NORMAL',
-            description: payload.detection.reason
+            type: payload.log?.attack_type || 'Unknown',
+            ip: payload.log?.ip || '0.0.0.0',
+            status: payload.detection?.threat ? 'THREAT' : 'NORMAL',
+            description: payload.detection?.explanation || payload.detection?.reason || 'System Intercept'
           };
           setLogs(prev => [logEntry, ...prev].slice(0, 100));
         }
       } catch (err) {
-        console.error("[WS] Data Parse Error:", err);
+        console.error("[WS] CRITICAL_PARSE_ERROR:", err);
       }
     };
 
@@ -98,11 +97,10 @@ const LiveFeed = () => {
   const triggerSimulation = async () => {
     setIsSimulating(true);
     try {
-      const { data } = await getFullCycle();
-      console.log("Simulated Result:", data);
-      // Manually add to feed if websocket doesn't pick it up immediately
+      await startSimulation();
+      console.log("[SIM] GLOBAL_INTERCEPTOR_STARTED");
     } catch (e) {
-      console.error("Simulation failed", e);
+      console.error("[SIM] START_FAILED:", e);
     } finally {
       setTimeout(() => setIsSimulating(false), 800);
     }
