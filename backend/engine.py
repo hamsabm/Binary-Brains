@@ -186,6 +186,11 @@ def detect_threat(log: dict) -> dict:
   risk = calculate_risk(ip, {"threat": threat, "confidence": conf})
   profile = profile_attacker(ip, log.get("attack_type", "none"))
   
+  # GAME RECO LOGIC
+  reco = "IGNORE"
+  if threat:
+      reco = "BLOCK" if conf >= 85 else "RATE_LIMIT"
+
   return {
     "threat": threat,
     "confidence": conf,
@@ -193,7 +198,8 @@ def detect_threat(log: dict) -> dict:
     "explanation": explanation,
     "risk": risk,
     "profile": profile,
-    "priority": priority if threat else "LOW"
+    "priority": priority if threat else "LOW",
+    "recommended_action": reco
   }
 
 def respond(detection: dict, log: dict) -> dict:
