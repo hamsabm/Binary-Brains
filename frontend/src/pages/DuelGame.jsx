@@ -261,7 +261,7 @@ const DuelGame = () => {
       <AnimatePresence>
         {feedback && (
           <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 1.5, opacity: 0 }}
-            className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[300] px-16 py-8 rounded-[40px] font-black text-6xl shadow-2xl skew-x-[-15deg] ${feedback.type === 'SUCCESS' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}
+            className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[300] px-16 py-8 rounded-[40px] font-black text-6xl shadow-2xl skew-x-[-15deg] cyber-shake-anim ${feedback.type === 'SUCCESS' ? 'bg-emerald-500 text-white shadow-[0_0_50px_rgba(16,185,129,0.5)]' : 'bg-red-500 text-white shadow-[0_0_50px_rgba(239,68,68,0.5)]'}`}
           >
              {feedback.type === 'SUCCESS' ? `+${feedback.pts} SECURED` : `NEURAL_BREACH`}
           </motion.div>

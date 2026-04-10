@@ -83,17 +83,17 @@ const Login = () => {
           
           <form onSubmit={handleAction} className="space-y-8">
             <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{isRegister ? 'New Neural Identity' : 'Identity Vector'}</label>
+               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{isRegister ? 'Register Email Identity' : 'Authorized Email Vector'}</label>
                <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-colors text-slate-500 group-focus-within:text-cyan-400">
                     <User size={18} />
                   </div>
                   <input
-                    type="text"
+                    type="email"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full bg-white/5 border border-white/5 rounded-2xl py-5 pl-14 pr-6 text-white text-sm font-bold focus:outline-none focus:border-cyan-500/50 focus:bg-white/10 transition-all placeholder:text-slate-600"
-                    placeholder="Enter operator code..."
+                    placeholder="Enter email address..."
                     required
                   />
                </div>

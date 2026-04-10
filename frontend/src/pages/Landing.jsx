@@ -68,14 +68,13 @@ const Landing = () => {
          {/* MAIN TITLE - GLITCH STYLE */}
          <div className="text-center relative mb-12">
             <h1 
-              data-text="ELIMINATE THE UNKNOWN."
-              className="text-7xl md:text-9xl font-black tracking-tighter text-white mb-6 glitch-text leading-none"
+              data-text="AI CYBER WAR ROOM"
+              className="text-7xl md:text-9xl font-black tracking-tighter text-white mb-6 glitch-text leading-none uppercase"
             >
-               ELIMINATE THE <br /> <span className="vibrant-gradient-text">UNKNOWN.</span>
+               AI CYBER <br /> <span className="vibrant-gradient-text italic">WAR ROOM</span>
             </h1>
-            <p className="max-w-3xl mx-auto text-xl text-slate-400 font-medium leading-relaxed">
-               The world's most advanced AI-driven cybersecurity command center. 
-               Experience real-time neural threat interception with <span className="text-white font-bold">zero-latency</span> autonomous mitigation.
+            <p className="max-w-4xl mx-auto text-xl text-slate-400 font-black tracking-tight leading-relaxed uppercase opacity-80">
+               Where AI Attacks, Defends, and Explains — In Real Time.
             </p>
          </div>
 
