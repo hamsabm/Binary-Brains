@@ -3,13 +3,15 @@ import random
 import time
 import uuid
 from typing import Dict, List, Any
-import engine
+from services import engine
 
 class GameManager:
     def __init__(self):
         self.rooms: Dict[str, Dict[str, Any]] = {}
         self.online_users: Dict[str, Dict[str, Any]] = {} # id -> {username, status}
         self.matchmaking_queue: List[str] = [] # List of player IDs
+        self.lobby_connections: Dict[str, Any] = {} # id -> websocket
+        self.duel_connections: Dict[str, List[Any]] = {} # room_id -> [websockets]
 
     async def create_or_join_room(self, room_id: str, player_id: str, mode: str = "duel"):
         if room_id not in self.rooms:

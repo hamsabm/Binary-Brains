@@ -1,37 +1,44 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: 'http://127.0.0.1:8000' });
+const API_URL = 'http://localhost:8001';
 
-api.interceptors.request.use(cfg => {
-  const token = localStorage.getItem('access_token');
-  if (token) cfg.headers.Authorization = `Bearer ${token}`;
-  return cfg;
+const api = axios.create({
+  baseURL: API_URL,
 });
 
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error?.response?.status === 401) {
-      localStorage.removeItem('access_token');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-    }
-    return Promise.reject(error);
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+});
 
-export const loginUser = (u, p) => api.post('/auth/login', { username: u, password: p });
-export const getFullCycle = () => api.get('/simulate/full_cycle');
-export const getStats = () => api.get('/dashboard/stats');
-export const getLogs = (limit=50) => api.get(`/dashboard/logs?limit=${limit}`);
-export const postChat = (message, include_context=true) => api.post('/ai/chat', { message, include_context });
+export const authApi = {
+  login: async (email, password) => {
+    const formData = new FormData();
+    formData.append('username', email);
+    formData.append('password', password);
+    const response = await api.post('/auth/login', formData);
+    return response.data;
+  },
+  register: (email, password) => api.post('/auth/register', { email, password }),
+};
 
-// ADVANCED ADD-ONS
-export const getPrediction = () => api.get('/intel/prediction');
-export const getGameStats = () => api.get('/gamified/stats');
-export const startSimulation = () => api.post('/simulate/start');
-export const stopSimulation = () => api.post('/simulate/stop');
-export const toggleSimulation = (active) => api.post(`/simulate/toggle?active=${active}`);
+export const simApi = {
+  start: () => api.post('/simulate/start'),
+  stop: () => api.post('/simulate/stop'),
+  reset: () => api.post('/simulate/reset'),
+  getStatus: () => api.get('/simulate/status'),
+};
+
+export const dashboardApi = {
+  getStats: () => api.get('/dashboard/stats'),
+  getLogs: () => api.get('/dashboard/logs'),
+};
+
+export const ariaApi = {
+  chat: (query) => api.post('/aria/chat', { query }),
+};
 
 export default api;

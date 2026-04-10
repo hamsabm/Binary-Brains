@@ -41,10 +41,11 @@ def generate_log(attack):
         "ip": attack["ip"],
         "country": attack["country"],
         "event": "Authentication Attempt",
-        "attack_type": attack["type"],
+        "attack_type": attack["type"].lower().replace(" ", "_"),
         "payload": attack["payload"],
         "raw_log": raw
     }
+
 
 def detect_threat(log):
     """5. DETECTION ENGINE (STRICT RULE-BASED)"""
@@ -74,9 +75,11 @@ def detect_threat(log):
         "confidence": min(confidence, 100),
         "priority": priority,
         "reason": reason,
+        "recommended_action": "BLOCK" if confidence > 85 else "RATE_LIMIT" if confidence > 50 else "IGNORE",
         "profile": {"type": "Malicious Script" if confidence > 50 else "Anomaly"},
         "risk": {"score": confidence, "label": "HIGH_RISK" if confidence > 80 else "LOW_RISK"}
     }
+
 
 def respond(detection, log):
     """6. RESPONSE ENGINE (AUTOMATED)"""

