@@ -95,6 +95,20 @@ async def get_stats(current_user: str = Depends(auth.get_current_user)): return 
 @app.get("/dashboard/logs")
 async def get_logs(limit: int = 50, current_user: str = Depends(auth.get_current_user)): return database.get_recent_logs(limit)
 
+@app.post("/simulate/start")
+async def start_sim_endpoint(current_user: str = Depends(auth.get_current_user)):
+    global simulation_active
+    simulation_active = True
+    database.log_user_activity(current_user, "SIM_START", "Manual simulation trigger")
+    return {"status": "started"}
+
+@app.post("/simulate/stop")
+async def stop_sim_endpoint(current_user: str = Depends(auth.get_current_user)):
+    global simulation_active
+    simulation_active = False
+    database.log_user_activity(current_user, "SIM_STOP", "Manual simulation halt")
+    return {"status": "stopped"}
+
 # --- WEB SOCKETS (Lobby, Duel, Live) ---
 @app.websocket("/ws/lobby")
 async def lobby_endpoint(websocket: WebSocket, player_id: str = Query(...)):
