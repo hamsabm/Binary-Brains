@@ -9,15 +9,11 @@ import ThreatGlobe from './pages/ThreatGlobe';
 import Game from './pages/Game';
 import MultiplayerGame from './pages/MultiplayerGame';
 import DuelGame from './pages/DuelGame';
+import Lobby from './pages/Lobby';
 import AdminActivity from './pages/AdminActivity';
 import { ShieldCheck, Activity, Globe, Target, Cpu, Lock, Swords, Users, Sword, ClipboardList, Zap } from 'lucide-react';
 
 const BG_MAIN = "#050a14";
-const BG_CARD = "#0b1220";
-const BG_CARD2 = "#121f34";
-const BORDER = "#1e293b";
-const GREEN = "#22d3ee";
-const TEXT = "#dbeafe";
 
 const isTokenValid = (token) => {
   if (!token) return false;
@@ -72,7 +68,7 @@ const Sidebar = () => {
         <div className="pt-6 border-t border-white/5 space-y-4">
            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest pl-6">Engagement Deck</span>
            <NavBtn label="Combat: Single" to="/game" active={location === '/game'} icon={<Sword size={18}/>} />
-           <NavBtn label="Combat: Duel" to="/game/duel" active={location === '/game/duel'} icon={<Swords size={18}/>} />
+           <NavBtn label="Combat: Lobby" to="/game/lobby" active={location.startsWith('/game/lobby')} icon={<Swords size={18}/>} />
            <NavBtn label="Combat: PvP" to="/game/multiplayer" active={location === '/game/multiplayer'} icon={<Users size={18}/>} />
         </div>
 
@@ -160,7 +156,13 @@ function App() {
           </ProtectedRoute>
         } />
 
-        <Route path="/game/duel" element={
+        <Route path="/game/lobby" element={
+          <ProtectedRoute>
+            <Layout><Lobby /></Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/game/duel/:roomId" element={
           <ProtectedRoute>
             <DuelGame />
           </ProtectedRoute>
