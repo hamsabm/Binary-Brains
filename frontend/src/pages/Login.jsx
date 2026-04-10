@@ -14,12 +14,26 @@ const Login = () => {
     setLoading(true);
     setError('');
 
+    const loginAttempt = async (url) => {
+       return await fetch(url, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ username, password }),
+       });
+    };
+
     try {
-      const response = await fetch(`http://${window.location.hostname}:8000/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
+      let response;
+      // NUCLEAR FALLBACK LOGIC
+      try {
+        response = await loginAttempt(`http://${window.location.hostname}:8000/auth/login`);
+      } catch (e) {
+        try {
+          response = await loginAttempt(`http://127.0.0.1:8000/auth/login`);
+        } catch (e2) {
+          response = await loginAttempt(`http://localhost:8000/auth/login`);
+        }
+      }
 
       const data = await response.json();
       if (response.ok) {
