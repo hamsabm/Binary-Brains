@@ -15,24 +15,28 @@ const Login = () => {
     setError('');
 
     const loginAttempt = async (url) => {
-       return await fetch(url, {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ username, password }),
-       });
+       try {
+         const resp = await fetch(url, {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ username, password }),
+         });
+         return resp;
+       } catch (err) {
+         console.warn(`Connection to ${url} failed`, err);
+         return null;
+       }
     };
 
     try {
-      let response;
-      // NUCLEAR FALLBACK LOGIC
-      try {
-        response = await loginAttempt(`http://${window.location.hostname}:8000/auth/login`);
-      } catch (e) {
-        try {
-          response = await loginAttempt(`http://127.0.0.1:8000/auth/login`);
-        } catch (e2) {
-          response = await loginAttempt(`http://localhost:8000/auth/login`);
-        }
+      let response = await loginAttempt(`http://127.0.0.1:8000/auth/login`);
+      
+      if (!response) {
+        response = await loginAttempt(`http://localhost:8000/auth/login`);
+      }
+      
+      if (!response) {
+        throw new Error("Unable to establish tactical link to WarRoomX backend.");
       }
 
       const data = await response.json();
