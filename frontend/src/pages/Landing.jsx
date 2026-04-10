@@ -15,16 +15,11 @@ const Landing = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden selection:bg-cyan-500/30">
+    <div className="min-h-screen bg-transparent text-white overflow-hidden selection:bg-cyan-500/30">
       
-      {/* IMMERSIVE BACKGROUND */}
+      {/* IMMERSIVE BACKGROUND - Translucent */}
       <div className="fixed inset-0 z-0">
-         <div className="absolute inset-0 cyber-grid opacity-30" />
-         <div className="absolute inset-0 scan-line" />
-         <div className="absolute inset-0 hero-gradient" />
-         {/* Moving Particles (Simulated with Blur) */}
-         <div className="absolute top-[20%] left-[10%] w-[40rem] h-[40rem] bg-purple-600/10 rounded-full blur-[120px] animate-float" />
-         <div className="absolute bottom-[10%] right-[10%] w-[50rem] h-[50rem] bg-cyan-600/10 rounded-full blur-[150px] animate-float opacity-50" />
+         {/* Mesh and Scanlines are now global */}
       </div>
 
       {/* NAV BAR - TACTICAL STYLE */}

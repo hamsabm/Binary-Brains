@@ -38,11 +38,10 @@ const Login = () => {
   return (
     <div className="min-h-screen relative flex items-center justify-center p-6 overflow-hidden">
       
-      {/* Background Cinematic Elements */}
+      {/* Background Cinematic Elements - Translucent to show global mesh */}
       <div className="absolute inset-0 z-0">
-         <div className="absolute top-[10%] left-[15%] w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px] animate-float" />
-         <div className="absolute bottom-[20%] right-[10%] w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[150px] animate-float opacity-50" />
-         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(15,23,42,0)_0%,rgba(2,6,23,0.8)_100%)]" />
+         <div className="absolute top-[10%] left-[15%] w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] animate-float" />
+         <div className="absolute inset-0 bg-transparent" />
       </div>
 
       <div className="w-full max-w-[480px] z-10 animate-in fade-in zoom-in duration-700">
