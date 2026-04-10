@@ -32,7 +32,9 @@ const DashboardPage = () => {
   }, [fetchStats]);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8001/ws');
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = window.location.hostname === 'localhost' ? 'localhost:8001' : window.location.host;
+    const ws = new WebSocket(`${wsProtocol}//${wsHost}/ws`);
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.log) {
