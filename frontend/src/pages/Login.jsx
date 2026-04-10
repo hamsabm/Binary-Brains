@@ -43,15 +43,19 @@ const Login = () => {
       if (response.ok) {
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('username', username);
-        // Simple role parsing for demo (real version uses jwt decode)
-        const role = username === 'admin' ? 'admin' : 'user';
+        // Explicitly set role based on username for UI segmentation
+        const role = username.toLowerCase() === 'admin' ? 'admin' : 'user';
         localStorage.setItem('role', role);
+        console.log(`[AUTH] Access Granted: ${username} // Role: ${role}`);
         navigate('/dashboard');
       } else {
-        setError(data.detail || 'Access Denied: Invalid Authentication Credentials');
+        const errorMsg = data.detail || 'Access Denied: Invalid Authentication Credentials';
+        console.error("[AUTH] FAIL:", errorMsg);
+        setError(errorMsg);
       }
     } catch (err) {
-      setError('Connection Error: Remote Node Unreachable');
+      console.error("[AUTH] CONN_ERROR:", err);
+      setError('Tactical Link Failed: Remote Node Unreachable. Ensure Backend is Running.');
     } finally {
       setLoading(false);
     }

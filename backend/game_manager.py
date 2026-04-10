@@ -1,103 +1,154 @@
 import asyncio
 import random
 import time
+import uuid
 from typing import Dict, List, Any
 import engine
 
 class GameManager:
     def __init__(self):
         self.rooms: Dict[str, Dict[str, Any]] = {}
-        self.boss_wave_active = False
 
-    async def create_or_join_room(self, room_id: str, player_id: str):
+    async def create_or_join_room(self, room_id: str, player_id: str, mode: str = "coop"):
+        """
+        room_id: unique room identifier
+        player_id: username or unique id
+        mode: 'coop' (Human vs AI/Multiplayer Same Side) or 'duel' (Attacker vs Defender)
+        """
         if room_id not in self.rooms:
             self.rooms[room_id] = {
+                "mode": mode,
                 "players": {},
                 "current_attack": None,
                 "history": [],
                 "start_time": time.time(),
-                "boss_wave": False
+                "game_over": False,
+                "timer": 120, # 2 minute default
+                "roles": {}, # For duel mode: {player_id: 'attacker'|'defender'}
             }
         
-        if len(self.rooms[room_id]["players"]) < 2:
-            self.rooms[room_id]["players"][player_id] = {
+        room = self.rooms[room_id]
+        if len(room["players"]) < 2:
+            room["players"][player_id] = {
                 "score": 0,
                 "accuracy": 100,
                 "streak": 0,
                 "combo": 1,
                 "total_attempts": 0,
-                "correct_attempts": 0
+                "correct_attempts": 0,
             }
+            
+            # Role Assignment for Duel Mode
+            if mode == "duel":
+                if not room["roles"]:
+                    room["roles"][player_id] = "attacker"
+                else:
+                    room["roles"][player_id] = "defender"
+            
             return True
         return False
 
-    def process_action(self, room_id: str, player_id: str, action: str, attack_id: str):
+    def launch_manual_attack(self, room_id: str, attacker_id: str, attack_type: str):
+        """Called when an attacker (Red Team) triggers an attack in Duel mode."""
         room = self.rooms.get(room_id)
-        if not room or not room["current_attack"] or room["current_attack"]["log"]["log_id"] != attack_id:
+        if not room or room["mode"] != "duel" or room["roles"].get(attacker_id) != "attacker":
             return None
 
-        player = room["players"].get(player_id)
-        if not player:
+        # Logic to generate specific attack
+        attack = engine.generate_attack() # Core generation
+        # Override with requested type
+        type_map = {
+            "SQL Injection": "sql_injection",
+            "Brute Force": "brute_force",
+            "Port Scan": "port_scan",
+            "DDoS": "ddos"
+        }
+        internal_type = type_map.get(attack_type, "sql_injection")
+        attack["attack_type"] = internal_type
+        attack["type"] = attack_type
+        
+        log = engine.generate_log(attack)
+        detection = engine.detect_threat(log)
+        
+        room["current_attack"] = {
+            "attack": attack,
+            "log": log,
+            "detection": detection,
+            "timestamp_start": time.time()
+        }
+        return room["current_attack"]
+
+    def process_duel_action(self, room_id: str, defender_id: str, action: str, attack_id: str):
+        """Called when defender (Blue Team) initiates a block/mitigate."""
+        room = self.rooms.get(room_id)
+        if not room or room["mode"] != "duel" or room["roles"].get(defender_id) != "defender":
+            return None
+            
+        if not room["current_attack"] or room["current_attack"]["log"]["log_id"] != attack_id:
             return None
 
         correct_action = room["current_attack"]["detection"]["recommended_action"]
         is_correct = action == correct_action
         
-        # Scoring logic
+        # Scoring Logic for Duel
+        # Defender gets points if correct. Attacker gets points if defender fails.
+        defender = room["players"][defender_id]
+        attacker_id = [pid for pid, role in room["roles"].items() if role == "attacker"][0]
+        attacker = room["players"][attacker_id]
+        
         points = 0
+        speed_bonus = 0
+        elapsed = time.time() - room["current_attack"]["timestamp_start"]
+        
         if is_correct:
-            player["correct_attempts"] += 1
-            player["streak"] += 1
-            player["combo"] = (player["streak"] // 3) + 1
-            points = 10 * player["combo"]
-            
-            # Speed bonus (if within 2s)
-            elapsed = time.time() - room["current_attack"]["timestamp_start"]
+            points = 10
             if elapsed < 2.0:
-                points += 5
+                speed_bonus = 5
+            defender["score"] += (points + speed_bonus)
+            defender["correct_attempts"] += 1
         else:
-            player["streak"] = 0
-            player["combo"] = 1
-            points = -5
-
-        player["total_attempts"] += 1
-        player["score"] = max(0, player["score"] + points)
-        player["accuracy"] = (player["correct_attempts"] / player["total_attempts"]) * 100
-
+            attacker["score"] += 10
+        
+        defender["total_attempts"] += 1
+        room["current_attack"] = None # Attack resolved
+        
         return {
-            "player_id": player_id,
             "is_correct": is_correct,
-            "points": points,
-            "new_score": player["score"],
-            "streak": player["streak"],
-            "combo": player["combo"],
-            "accuracy": player["accuracy"]
+            "points": points + speed_bonus,
+            "defender_id": defender_id,
+            "attacker_id": attacker_id,
+            "new_scores": {
+                defender_id: defender["score"],
+                attacker_id: attacker["score"]
+            }
         }
 
-    async def run_boss_wave(self, room_id: str, broadcast_callback):
+    async def run_game_loop(self, room_id: str, broadcast_callback):
+        """Main loop to sync timer and broadcast state updates."""
         room = self.rooms.get(room_id)
-        if not room or room["boss_wave"]:
-            return
-
-        room["boss_wave"] = True
-        await broadcast_callback({"type": "BOSS_WAVE_START", "message": "⚠️ DDoS WAVE DETECTED"})
+        if not room: return
         
-        for _ in range(random.randint(10, 15)):
-            attack = engine.generate_attack()
-            log = engine.generate_log(attack)
-            detection = engine.detect_threat(log)
+        start_ts = time.time()
+        while time.time() - start_ts < room["timer"]:
+            if room_id not in self.rooms: break
             
-            room["current_attack"] = {
-                "attack": attack,
-                "log": log,
-                "detection": detection,
-                "timestamp_start": time.time()
-            }
+            # Tick
+            remaining = int(room["timer"] - (time.time() - start_ts))
+            await broadcast_callback({
+                "type": "TICK",
+                "data": {
+                    "time_remaining": remaining,
+                    "scores": {pid: p["score"] for pid, p in room["players"].items()}
+                }
+            })
+            await asyncio.sleep(1)
             
-            await broadcast_callback({"type": "ATTACK", "data": room["current_attack"]})
-            await asyncio.sleep(0.8) # Rapid fire
-            
-        room["boss_wave"] = False
-        await broadcast_callback({"type": "BOSS_WAVE_END", "message": "Wave Neutralized"})
+        if room_id in self.rooms:
+            await broadcast_callback({"type": "GAME_OVER", "data": "Combat Phase Complete"})
+            # Winner detection
+            scores = {pid: p["score"] for pid, p in room["players"].items()}
+            winner = max(scores, key=scores.get) if scores else "None"
+            await broadcast_callback({"type": "RESULT", "winner": winner})
+            # Cleanup later or keep for session replay
 
 game_manager = GameManager()
