@@ -54,8 +54,40 @@ user_activity = Table(
     Column("timestamp", DateTime, default=datetime.datetime.utcnow),
 )
 
+users = Table(
+    "users",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("username", String, unique=True),
+    Column("password", String),
+    Column("role", String, default="user"),
+    Column("created_at", DateTime, default=datetime.datetime.utcnow),
+)
+
 def init_db():
     metadata.create_all(engine)
+    # Check if we need to insert default users
+    with engine.connect() as conn:
+        res = conn.execute(select(func.count()).select_from(users)).scalar()
+        if res == 0:
+            import auth
+            # Admin
+            conn.execute(insert(users).values(username="admin", password=auth.hash_password("cyberwar123"), role="admin"))
+            # Defaults
+            conn.execute(insert(users).values(username="user1", password=auth.hash_password("user123"), role="user"))
+            conn.execute(insert(users).values(username="user2", password=auth.hash_password("user123"), role="user"))
+            conn.commit()
+
+def insert_user(username, password, role="user"):
+    with engine.connect() as conn:
+        conn.execute(insert(users).values(username=username, password=password, role=role))
+        conn.commit()
+
+def get_user(username):
+    with engine.connect() as conn:
+        stmt = select(users).where(users.c.username == username)
+        result = conn.execute(stmt).first()
+        return dict(result._mapping) if result else None
 
 def insert_log(log_dict: dict):
     with engine.connect() as conn:

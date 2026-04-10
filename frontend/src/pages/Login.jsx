@@ -4,58 +4,50 @@ import { Shield, Lock, User, ChevronRight, Activity, Zap } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('cyberwar123');
+  const [isRegister, setIsRegister] = useState(false);
+  const [username, setUsername] = useState('user1');
+  const [password, setPassword] = useState('user123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const handleLogin = async (e) => {
+  const handleAction = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
 
-    const loginAttempt = async (url) => {
-       try {
-         const resp = await fetch(url, {
-           method: 'POST',
-           headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify({ username, password }),
-         });
-         return resp;
-       } catch (err) {
-         console.warn(`Connection to ${url} failed`, err);
-         return null;
-       }
-    };
+    const endpoint = isRegister ? '/auth/register' : '/auth/login';
+    const baseUrl = `http://127.0.0.1:8000${endpoint}`;
 
     try {
-      let response = await loginAttempt(`http://127.0.0.1:8000/auth/login`);
+      const response = await fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
       
-      if (!response) {
-        response = await loginAttempt(`http://localhost:8000/auth/login`);
-      }
-      
-      if (!response) {
-        throw new Error("Unable to establish tactical link to WarRoomX backend.");
-      }
-
       const data = await response.json();
+      
       if (response.ok) {
-        localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('username', username);
-        // Explicitly set role based on username for UI segmentation
-        const role = username.toLowerCase() === 'admin' ? 'admin' : 'user';
-        localStorage.setItem('role', role);
-        console.log(`[AUTH] Access Granted: ${username} // Role: ${role}`);
-        navigate('/dashboard');
+        if (isRegister) {
+            setSuccess('Identity Provisioned. Re-authenticating...');
+            setTimeout(() => {
+                setIsRegister(false);
+                setSuccess('');
+            }, 2000);
+        } else {
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('username', username);
+            const role = username.toLowerCase() === 'admin' ? 'admin' : 'user';
+            localStorage.setItem('role', role);
+            navigate('/dashboard');
+        }
       } else {
-        const errorMsg = data.detail || 'Access Denied: Invalid Authentication Credentials';
-        console.error("[AUTH] FAIL:", errorMsg);
-        setError(errorMsg);
+        setError(data.detail || 'Access Denied: Authentication Failure');
       }
     } catch (err) {
-      console.error("[AUTH] CONN_ERROR:", err);
-      setError('Tactical Link Failed: Remote Node Unreachable. Ensure Backend is Running.');
+      setError('Tactical Node Failed: Remote connection refused');
     } finally {
       setLoading(false);
     }
@@ -89,9 +81,9 @@ const Login = () => {
         <div className="premium-card p-10 border-white/10 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-30" />
           
-          <form onSubmit={handleLogin} className="space-y-8">
+          <form onSubmit={handleAction} className="space-y-8">
             <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Identity Vector</label>
+               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{isRegister ? 'New Neural Identity' : 'Identity Vector'}</label>
                <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-colors text-slate-500 group-focus-within:text-cyan-400">
                     <User size={18} />
@@ -108,7 +100,7 @@ const Login = () => {
             </div>
 
             <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Access Protocol</label>
+               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{isRegister ? 'Create Security Key' : 'Access Protocol'}</label>
                <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-colors text-slate-500 group-focus-within:text-cyan-400">
                     <Lock size={18} />
@@ -131,19 +123,35 @@ const Login = () => {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-5 px-6 bg-cyan-500 hover:bg-cyan-400 text-[#020617] font-black rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(0,234,255,0.2)]"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  INITIALIZE SESSION <ChevronRight size={18} />
-                </>
-              )}
-            </button>
+            {success && (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3 animate-in slide-in-from-top-2 duration-300">
+                 <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+                 <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-tighter">{success}</span>
+              </div>
+            )}
+
+            <div className="space-y-4">
+                <button
+                type="submit"
+                disabled={loading}
+                className={`w-full py-5 px-6 font-black rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 shadow-xl ${isRegister ? 'bg-white/10 text-white border border-white/10 hover:bg-white/20' : 'bg-cyan-500 hover:bg-cyan-400 text-[#020617] shadow-[0_0_30px_rgba(0,234,255,0.2)]'}`}
+                >
+                {loading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                    <>
+                    {isRegister ? 'CREATE IDENTITY' : 'INITIALIZE SESSION'} <ChevronRight size={18} />
+                    </>
+                )}
+                </button>
+
+                <div 
+                    onClick={() => setIsRegister(!isRegister)}
+                    className="w-full text-center py-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] cursor-pointer hover:text-cyan-400 transition-colors"
+                >
+                    {isRegister ? 'Back to Access Protocol' : 'Request Neural Provisioning (Register)'}
+                </div>
+            </div>
           </form>
         </div>
 

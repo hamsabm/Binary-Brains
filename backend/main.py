@@ -21,8 +21,8 @@ import game_manager
 # --- GLOBAL STATE ---
 connected_clients = set()
 duel_connections: Dict[str, List[WebSocket]] = {} 
-lobby_connections: Dict[str, WebSocket] = {} # user_id -> websocket
-online_users: Dict[str, dict] = {} # user_id -> {username, status}
+lobby_connections: Dict[str, WebSocket] = {} 
+online_users: Dict[str, dict] = {} 
 matchmaking_queue = []
 simulation_active = True
 
@@ -36,10 +36,7 @@ async def global_attack_generator():
                 response = engine.respond(detection, log)
                 database.insert_log(log); database.insert_detection(log["log_id"], detection); database.insert_response(log["log_id"], response)
                 payload = {
-                    "event": {
-                        "ip": attack.get("ip"), "type": attack.get("type", attack.get("attack_type")), "timestamp": attack.get("timestamp"),
-                        "lat": attack.get("lat"), "lng": attack.get("lng"), "country": attack.get("country", "Unknown")
-                    },
+                    "event": {"ip": attack.get("ip"), "type": attack.get("type", attack.get("attack_type")), "timestamp": attack.get("timestamp"), "lat": attack.get("lat"), "lng": attack.get("lng"), "country": attack.get("country", "Unknown")},
                     "attack": attack, "log": log, "detection": detection, "response": response
                 }
                 disconnected = set()
@@ -71,21 +68,23 @@ async def lifespan(app: FastAPI):
     yield
     task.cancel()
 
-app = FastAPI(title="WarRoomX", version="4.0.0", lifespan=lifespan)
+app = FastAPI(title="WarRoomX", version="5.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-# --- AUTH ---
-USERS_DB = {
-    "admin": {"pw": auth.hash_password("cyberwar123"), "role": "admin"},
-    "analyst": {"pw": auth.hash_password("analyst123"), "role": "user"},
-    "operative": {"pw": auth.hash_password("operative123"), "role": "user"}
-}
+# --- AUTH SYSTEM (DATABASE PERSISTED) ---
+@app.post("/auth/register")
+async def register(req: schemas.LoginRequest):
+    if database.get_user(req.username): raise HTTPException(status_code=400, detail="Identity ID already registered in neural pool")
+    hashed_pw = auth.hash_password(req.password)
+    database.insert_user(req.username, hashed_pw, role="user")
+    database.log_user_activity(req.username, "REGISTER", "New user self-provisioned")
+    return {"status": "identity_created"}
 
 @app.post("/auth/login", response_model=schemas.TokenResponse)
 async def login(req: schemas.LoginRequest):
-    if req.username not in USERS_DB: raise HTTPException(status_code=401, detail="Invalid credentials")
-    user_data = USERS_DB[req.username]
-    if not auth.verify_password(req.password, user_data["pw"]): raise HTTPException(status_code=401, detail="Invalid credentials")
+    user_data = database.get_user(req.username)
+    if not user_data: raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not auth.verify_password(req.password, user_data["password"]): raise HTTPException(status_code=401, detail="Invalid credentials")
     token = auth.create_access_token(data={"sub": req.username, "role": user_data["role"]})
     database.log_user_activity(req.username, "LOGIN", f"Access granted as {user_data['role']}")
     return schemas.TokenResponse(access_token=token)
@@ -93,23 +92,23 @@ async def login(req: schemas.LoginRequest):
 @app.get("/dashboard/stats")
 async def get_stats(current_user: str = Depends(auth.get_current_user)): return database.get_stats()
 
-# --- LOBBY WEBSOCKET ---
+@app.get("/dashboard/logs")
+async def get_logs(limit: int = 50, current_user: str = Depends(auth.get_current_user)): return database.get_recent_logs(limit)
+
+# --- WEB SOCKETS (Lobby, Duel, Live) ---
 @app.websocket("/ws/lobby")
 async def lobby_endpoint(websocket: WebSocket, player_id: str = Query(...)):
     await websocket.accept()
     lobby_connections[player_id] = websocket
     online_users[player_id] = {"id": player_id, "username": player_id, "status": "Available"}
     await broadcast_lobby_state()
-    
     try:
         while True:
             data = await websocket.receive_json()
             if data["type"] == "INVITE":
                 target_id = data["to"]
                 if target_id in lobby_connections:
-                    await lobby_connections[target_id].send_json({
-                        "type": "INVITE_RECEIVED", "from": player_id, "room_id": f"DUEL_{player_id}_{target_id}"
-                    })
+                    await lobby_connections[target_id].send_json({"type": "INVITE_RECEIVED", "from": player_id, "room_id": f"DUEL_{player_id}_{target_id}"})
             elif data["type"] == "JOIN_QUEUE":
                 if player_id not in matchmaking_queue:
                     matchmaking_queue.append(player_id)
@@ -127,27 +126,19 @@ async def lobby_endpoint(websocket: WebSocket, player_id: str = Query(...)):
         if player_id in matchmaking_queue: matchmaking_queue.remove(player_id)
         await broadcast_lobby_state()
 
-# --- DUEL WEBSOCKET ---
 @app.websocket("/ws/duel/{room_id}")
 async def duel_websocket(websocket: WebSocket, room_id: str, player_id: str = Query(...)):
     await websocket.accept()
     success = await game_manager.game_manager.create_or_join_room(room_id, player_id, mode="duel")
-    if not success:
-        await websocket.close(code=1008); return
-
+    if not success: await websocket.close(code=1008); return
     if room_id not in duel_connections: duel_connections[room_id] = []
     duel_connections[room_id].append(websocket)
     room = game_manager.game_manager.rooms[room_id]
     role = room["roles"].get(player_id)
-    if player_id in online_users: online_users[player_id]["status"] = "In Game"
-    await broadcast_lobby_state()
-    
+    if player_id in online_users: online_users[player_id]["status"] = "In Game"; await broadcast_lobby_state()
     await websocket.send_json({"type": "INIT", "role": role, "config": {"timer": room["timer"]}})
     await broadcast_to_room(room_id, {"type": "PLAYER_JOIN", "player_id": player_id, "role": role})
-
-    if len(room["players"]) == 2:
-        asyncio.create_task(game_manager.game_manager.run_game_loop(room_id, lambda msg: broadcast_to_room(room_id, msg)))
-
+    if len(room["players"]) == 2: asyncio.create_task(game_manager.game_manager.run_game_loop(room_id, lambda msg: broadcast_to_room(room_id, msg)))
     try:
         while True:
             data = await websocket.receive_json()
@@ -158,17 +149,14 @@ async def duel_websocket(websocket: WebSocket, room_id: str, player_id: str = Qu
                 result = game_manager.game_manager.process_duel_action(room_id, player_id, data["action"], data["attack_id"])
                 if result: await broadcast_to_room(room_id, {"type": "ACTION_RESULT", "data": result})
     except Exception:
-        if room_id in duel_connections:
-            if websocket in duel_connections[room_id]: duel_connections[room_id].remove(websocket)
-        if player_id in online_users: online_users[player_id]["status"] = "Available"
-        await broadcast_lobby_state()
+        if room_id in duel_connections and websocket in duel_connections[room_id]: duel_connections[room_id].remove(websocket)
+        if player_id in online_users: online_users[player_id]["status"] = "Available"; await broadcast_lobby_state()
 
 @app.websocket("/ws/live")
 async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
     try: auth.decode_token(token)
     except Exception: await websocket.close(code=1008); return
-    await websocket.accept()
-    connected_clients.add(websocket)
+    await websocket.accept(); connected_clients.add(websocket)
     try:
         while True: await websocket.receive_text()
     except (WebSocketDisconnect, Exception):
