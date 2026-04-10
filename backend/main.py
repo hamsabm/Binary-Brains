@@ -165,7 +165,7 @@ async def duel_websocket(websocket: WebSocket, room_id: str, player_id: str = Qu
 
 @app.websocket("/ws/live")
 async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
-    try: auth.get_current_user(token)
+    try: auth.decode_token(token)
     except Exception: await websocket.close(code=1008); return
     await websocket.accept()
     connected_clients.add(websocket)
