@@ -6,8 +6,9 @@ import Dashboard from './pages/Dashboard';
 import LiveFeed from './pages/LiveFeed';
 import Assistant from './pages/Assistant';
 import ThreatGlobe from './pages/ThreatGlobe';
-import GameMode from './pages/GameMode';
-import { ShieldCheck, Activity, Globe, Target, Cpu, Lock, Swords } from 'lucide-react';
+import Game from './pages/Game';
+import MultiplayerGame from './pages/MultiplayerGame';
+import { ShieldCheck, Activity, Globe, Target, Cpu, Lock, Swords, Users, Sword } from 'lucide-react';
 
 const BG_MAIN = "#050a14";
 const BG_CARD = "#0b1220";
@@ -64,7 +65,11 @@ const Sidebar = () => {
         <NavBtn label="Live Stream" to="/live" active={location === '/live'} icon={<Globe size={18}/>} />
         <NavBtn label="Neural Hub" to="/threat-globe" active={location === '/threat-globe'} icon={<Target size={18}/>} />
         <NavBtn label="AI Assistant" to="/assistant" active={location === '/assistant'} icon={<Cpu size={18}/>} />
-        <NavBtn label="Combat Deck" to="/game-mode" active={location === '/game-mode'} icon={<Swords size={18}/>} />
+        <div className="pt-6 border-t border-white/5 space-y-4">
+           <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest pl-6">Engagement Deck</span>
+           <NavBtn label="Combat: Single" to="/game" active={location === '/game'} icon={<Sword size={18}/>} />
+           <NavBtn label="Combat: PvP" to="/game/multiplayer" active={location === '/game/multiplayer'} icon={<Users size={18}/>} />
+        </div>
       </nav>
 
       <div className="pt-8 border-t border-white/5">
@@ -137,9 +142,15 @@ function App() {
           </ProtectedRoute>
         } />
 
-        <Route path="/game-mode" element={
+        <Route path="/game" element={
           <ProtectedRoute>
-            <GameMode />
+            <Game />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/game/multiplayer" element={
+          <ProtectedRoute>
+            <MultiplayerGame />
           </ProtectedRoute>
         } />
         

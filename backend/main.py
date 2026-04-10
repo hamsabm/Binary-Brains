@@ -5,6 +5,7 @@ from fastapi import FastAPI, Depends, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import asyncio
+import time
 from datetime import datetime
 
 # Local Imports
@@ -13,6 +14,7 @@ import auth
 import engine
 import ai_engine
 import schemas
+import game_manager
 
 
 @asynccontextmanager
@@ -134,12 +136,65 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
                 "detection": detection,
                 "response": response
             }
-            print("Sent via WebSocket:", payload["event"])
             await websocket.send_json(payload)
-            await asyncio.sleep(3)
+            await asyncio.sleep(4)
     except Exception:
-        # Client disconnect handler
         pass
+
+# NEW MULTIPLAYER GAME ENDPOINTS
+@app.websocket("/ws/game/{room_id}")
+async def game_websocket(websocket: WebSocket, room_id: str, player_id: str = Query(...)):
+    await websocket.accept()
+    
+    success = await game_manager.game_manager.create_or_join_room(room_id, player_id)
+    if not success:
+        await websocket.close(code=1008)
+        return
+
+    try:
+        # Loop for game events
+        while True:
+            room = game_manager.game_manager.rooms.get(room_id)
+            if not room: break
+
+            if not room["boss_wave"]:
+                attack = engine.generate_attack()
+                log = engine.generate_log(attack)
+                detection = engine.detect_threat(log)
+                
+                room["current_attack"] = {
+                    "attack": attack,
+                    "log": log,
+                    "detection": detection,
+                    "timestamp_start": time.time()
+                }
+                
+                await websocket.send_json({
+                    "type": "ATTACK",
+                    "data": room["current_attack"]
+                })
+                
+                # Boss wave trigger (every 20 events for demo speed)
+                if len(room["history"]) % 20 == 0 and len(room["history"]) > 0:
+                    asyncio.create_task(game_manager.game_manager.run_boss_wave(room_id, websocket.send_json))
+                
+                room["history"].append(attack)
+                
+            await asyncio.sleep(5)
+            
+    except Exception:
+        if room_id in game_manager.game_manager.rooms:
+            if player_id in game_manager.game_manager.rooms[room_id]["players"]:
+                del game_manager.game_manager.rooms[room_id]["players"][player_id]
+            if not game_manager.game_manager.rooms[room_id]["players"]:
+                del game_manager.game_manager.rooms[room_id]
+
+@app.post("/game/action")
+async def register_action(room_id: str, player_id: str, action: str, attack_id: str):
+    result = game_manager.game_manager.process_action(room_id, player_id, action, attack_id)
+    if not result:
+        raise HTTPException(status_code=400, detail="Invalid action or attack expired")
+    return result
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
