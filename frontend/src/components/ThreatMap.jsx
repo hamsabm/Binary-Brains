@@ -47,7 +47,7 @@ const ThreatMap = ({ attacks = null, stream = true, height = 420 }) => {
     const token = localStorage.getItem('access_token');
     if (!token) return undefined;
 
-    const ws = new WebSocket(`ws://localhost:8000/ws/live?token=${encodeURIComponent(token)}`);
+    const ws = new WebSocket(`ws://${window.location.hostname}:8000/ws/live?token=${encodeURIComponent(token)}`);
     ws.onopen = () => setConnected(true);
     ws.onclose = () => setConnected(false);
     ws.onerror = () => setConnected(false);
