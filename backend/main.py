@@ -7,6 +7,7 @@ import uvicorn
 import asyncio
 import time
 from datetime import datetime
+from typing import Dict, List
 
 # Local Imports
 import database
@@ -75,10 +76,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="WarRoomX", version="3.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-# --- AUTH & PROFILES ---
+# Expanded User DB with Roles (Multi-Op Ready)
 USERS_DB = {
     "admin": {"pw": auth.hash_password("cyberwar123"), "role": "admin"},
-    "analyst": {"pw": auth.hash_password("analyst123"), "role": "user"}
+    "analyst": {"pw": auth.hash_password("analyst123"), "role": "user"},
+    "operative": {"pw": auth.hash_password("operative123"), "role": "user"}
 }
 
 @app.post("/auth/login", response_model=schemas.TokenResponse)
