@@ -84,6 +84,16 @@ async def get_stats(current_user: str = Depends(auth.get_current_user)):
 async def get_logs(limit: int = 50, current_user: str = Depends(auth.get_current_user)):
     return database.get_recent_logs(limit)
 
+@app.get("/intel/prediction")
+async def get_intel_prediction(current_user: str = Depends(auth.get_current_user)):
+    """Advanced Predictive AI Endpoint"""
+    return engine.get_prediction()
+
+@app.get("/gamified/stats")
+async def get_game_stats(current_user: str = Depends(auth.get_current_user)):
+    """Gamified Defense Hub Endpoint"""
+    return engine.get_gamified_stats()
+
 @app.post("/ai/chat", response_model=schemas.ChatResponse)
 async def ai_chat(req: schemas.ChatRequest, current_user: str = Depends(auth.get_current_user)):
     context = database.get_stats() if req.include_context else None

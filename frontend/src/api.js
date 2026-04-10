@@ -27,4 +27,9 @@ export const getStats = () => api.get('/dashboard/stats');
 export const getLogs = (limit=50) => api.get(`/dashboard/logs?limit=${limit}`);
 export const postChat = (message, include_context=true) => api.post('/ai/chat', { message, include_context });
 
+// ADVANCED ADD-ONS
+export const getPrediction = () => api.get('/intel/prediction');
+export const getGameStats = () => api.get('/gamified/stats');
+export const simulateFullCycle = () => api.get('/simulate/full_cycle');
+
 export default api;

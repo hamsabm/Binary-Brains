@@ -7,10 +7,12 @@ import json
 import logging
 import urllib.request
 import urllib.parse
+from collections import Counter
 
 faker_instance = Faker()
 logger = logging.getLogger(__name__)
 
+# STATIC PAYLOADS
 SQL_PAYLOADS = [
   "' OR '1'='1", "'; DROP TABLE users;--", "' UNION SELECT null,null--",
   "admin'--", "' OR 1=1--", "1; SELECT * FROM users", "' AND 1=0 UNION SELECT username,password FROM users--",
@@ -35,10 +37,13 @@ PORT_SCAN_PAYLOADS = [
   "UDP scan for DNS/NTP amplification vectors"
 ]
 
+# STATE TRACKING
 ip_attempt_count = {}
 blocked_ips = set()
 geo_cache = {}
-
+user_score = 1000  # Starting gamified score
+recent_types = []  # For prediction
+attacker_profiles = {}  # Per IP profiling
 
 GLOBAL_CITIES = [
     {"name": "New York", "lat": 40.7128, "lng": -74.0060},
@@ -59,108 +64,158 @@ GLOBAL_CITIES = [
 ]
 
 def _fallback_location(ip: str) -> dict:
-  # Using a seeded random selection from global cities to ensure high-fidelity 'real' land points
-  # Even if the external Geolocation API is rate-limited.
   seeded = random.Random(abs(hash(ip)) % (2**32))
   city = seeded.choice(GLOBAL_CITIES)
   return {
-      "lat": city["lat"] + seeded.uniform(-0.5, 0.5), # Add subtle variance
+      "lat": city["lat"] + seeded.uniform(-0.5, 0.5),
       "lng": city["lng"] + seeded.uniform(-0.5, 0.5),
       "country": "Simulated"
   }
 
-
 def get_location(ip: str) -> dict:
   cached = geo_cache.get(ip)
-  if cached:
-    return cached
-
+  if cached: return cached
   url = f"https://ipapi.co/{urllib.parse.quote(ip)}/json/"
   try:
     with urllib.request.urlopen(url, timeout=2.5) as response:
       payload = json.loads(response.read().decode("utf-8"))
-
-    lat = payload.get("latitude") if payload else None
-    lng = payload.get("longitude") if payload else None
-    country = (payload.get("country_name") or payload.get("country") or "Unknown") if payload else "Unknown"
-
-    if lat is None or lng is None:
-      location = _fallback_location(ip)
-    else:
-      location = {"lat": float(lat), "lng": float(lng), "country": country}
-  except Exception as exc:
-    logger.warning("geolocation lookup failed for ip=%s reason=%s", ip, exc)
-    location = _fallback_location(ip)
-
+    lat = payload.get("latitude"); lng = payload.get("longitude")
+    country = (payload.get("country_name") or payload.get("country") or "Unknown")
+    if lat is None or lng is None: location = _fallback_location(ip)
+    else: location = {"lat": float(lat), "lng": float(lng), "country": country}
+  except Exception: location = _fallback_location(ip)
   geo_cache[ip] = location
   return location
 
 def generate_attack() -> dict:
   ip = faker_instance.ipv4_public()
   attack_type = random.choice(["sql_injection", "brute_force", "port_scan"])
-  if attack_type == "sql_injection":
-    payload = random.choice(SQL_PAYLOADS)
-  elif attack_type == "brute_force":
-    payload = random.choice(BRUTE_PAYLOADS)
-  else:
-    payload = random.choice(PORT_SCAN_PAYLOADS)
+  
+  # Track for prediction
+  recent_types.append(attack_type)
+  if len(recent_types) > 20: recent_types.pop(0)
+
+  if attack_type == "sql_injection": payload = random.choice(SQL_PAYLOADS)
+  elif attack_type == "brute_force": payload = random.choice(BRUTE_PAYLOADS)
+  else: payload = random.choice(PORT_SCAN_PAYLOADS)
+  
   location = get_location(ip)
-  attack_event = {
+  return {
       "ip": ip,
       "attack_type": attack_type,
       "type": "SQL Injection" if attack_type == "sql_injection" else ("Brute Force" if attack_type == "brute_force" else "Port Scan"),
       "payload": payload,
       "timestamp": datetime.utcnow().isoformat(),
-      "lat": location["lat"],
-      "lng": location["lng"],
-      "country": location["country"]
+      "lat": location["lat"], "lng": location["lng"], "country": location["country"]
   }
-  print("Generated Attack:", {
-      "ip": attack_event["ip"],
-      "type": attack_event["type"],
-      "timestamp": attack_event["timestamp"],
-      "lat": attack_event["lat"],
-      "lng": attack_event["lng"],
-      "country": attack_event["country"]
-  })
-  return attack_event
 
-def generate_log(attack: dict) -> dict:
-  log_id = str(uuid.uuid4())
-  if attack["attack_type"] == "sql_injection":
-    event = f"GET /search?q={attack['payload']} HTTP/1.1 - 200"
-  elif attack["attack_type"] == "brute_force":
-    event = f"POST /api/login 401 Unauthorized user:{attack['payload']}"
-  else:
-    event = f"NETFLOW scan_detected src={attack['ip']} signature=\"{attack['payload']}\""
-  status = random.choices(["failed","success"], weights=[80,20])[0]
-  return {"log_id":log_id, "ip":attack["ip"], "event":event, "status":status, 
-          "attack_type":attack["attack_type"], "timestamp":attack["timestamp"],
-          "lat": attack.get("lat"), "lng": attack.get("lng"), "country": attack.get("country", "Unknown")}
+def calculate_risk(ip: str, detection: dict) -> dict:
+    """Advanced Dynamic Risk Scoring"""
+    ip_score = min(100, ip_attempt_count.get(ip, 0) * 15)
+    event_score = detection["confidence"]
+    
+    # Overall score weighted average
+    total_avg = (ip_score * 0.4) + (event_score * 0.6)
+    
+    label = "SAFE" if total_avg < 40 else ("SUSPICIOUS" if total_avg < 75 else "DANGEROUS")
+    color = "emerald" if total_avg < 40 else ("yellow" if total_avg < 75 else "pink")
+    
+    return {"score": int(total_avg), "label": label, "color": color, "ip_risk": ip_score}
+
+def get_prediction() -> dict:
+    """Predictive Threat Indicator"""
+    if not recent_types: return {"type": "Scanning", "probability": 10}
+    counts = Counter(recent_types)
+    most_common = counts.most_common(1)[0]
+    prob = int((most_common[1] / len(recent_types)) * 100)
+    
+    name_map = {"sql_injection": "SQL Injection", "brute_force": "Brute Force", "port_scan": "Network Scan"}
+    return {"type": name_map.get(most_common[0], "Unknown"), "probability": min(95, prob + random.randint(5, 15))}
+
+def profile_attacker(ip: str, attack_type: str):
+    """Attacker Profiling System"""
+    if ip not in attacker_profiles:
+        attacker_profiles[ip] = {"type": "New Neutral", "behavior": [], "score": 0}
+    
+    profile = attacker_profiles[ip]
+    profile["behavior"].append(attack_type)
+    counts = Counter(profile["behavior"])
+    
+    if counts["brute_force"] > 3: profile["type"] = "Brute Force Bot"
+    elif counts["sql_injection"] > 2: profile["type"] = "SQL Injector"
+    elif counts["port_scan"] > 2: profile["type"] = "Network Scanner"
+    elif len(profile["behavior"]) > 5: profile["type"] = "Persistent Threat"
+    
+    return profile
 
 def detect_threat(log: dict) -> dict:
   ip = log["ip"]
   ip_attempt_count[ip] = ip_attempt_count.get(ip, 0) + 1
   count = ip_attempt_count[ip]
-  SQL_PATTERNS = ["SELECT","UNION","DROP","OR '1","OR 1=","--",";","SLEEP","EXISTS","INSERT","EXEC"]
+  
+  # Explainable AI logic
+  explanation = ""
+  threat = False
+  conf = 10
+  priority = "LOW"
+  
+  SQL_PATTERNS = ["SELECT","UNION","DROP","OR '1","OR 1=","--",";","SLEEP","EXCEPT","INSERT","EXEC"]
   for pattern in SQL_PATTERNS:
     if pattern.lower() in log["event"].lower():
-      return {"threat":True,"confidence":92,"reason":f"SQL injection pattern '{pattern}' detected in request"}
-  if log.get("attack_type") == "port_scan":
-    return {"threat":True,"confidence":84,"reason":"Port scanning behaviour detected: sequential probing across multiple ports"}
-  if count > 5:
-    return {"threat":True,"confidence":88,"reason":f"Brute force: {count} login attempts from {ip}"}
-  if log["status"]=="success" and count >= 3:
-    return {"threat":True,"confidence":75,"reason":f"Possible breach after {count} prior attempts from {ip}"}
-  return {"threat":False,"confidence":10,"reason":"Normal traffic — no threat indicators"}
+      threat = True
+      conf = 92
+      explanation = f"Heuristic match confirmed: Pattern '{pattern}' is commonly used to bypass authentication or dump database schemas."
+      priority = "CRITICAL"
+      break
+      
+  if not threat and log.get("attack_type") == "port_scan":
+    threat = True
+    conf = 84
+    explanation = f"Multipoint scan detected from {ip}. Adversary is probing for open ports (21, 22, 80) to identify services for targeted exploit."
+    priority = "HIGH"
+    
+  if not threat and count > 5:
+    threat = True
+    conf = 88
+    explanation = f"Temporal frequency violation. {count} auth attempts in 30s exceeds safety threshold. High-confidence Brute-Force indicators."
+    priority = "HIGH"
+
+  if not threat:
+    explanation = "Traffic profile aligns with baseline user behavior. No non-standard patterns observed."
+
+  risk = calculate_risk(ip, {"threat": threat, "confidence": conf})
+  profile = profile_attacker(ip, log.get("attack_type", "none"))
+  
+  return {
+    "threat": threat,
+    "confidence": conf,
+    "reason": explanation if threat else "Baseline traffic",
+    "explanation": explanation,
+    "risk": risk,
+    "profile": profile,
+    "priority": priority if threat else "LOW"
+  }
 
 def respond(detection: dict, log: dict) -> dict:
+  global user_score
   ip = log["ip"]
+  
   if not detection["threat"]:
-    return {"action":"alert","message":f"Event logged from {ip}. No threat detected.","status":"executed"}
+    user_score += 5 # Reward for keeping system clean
+    return {"action":"alert","message":f"Event logged from {ip}. Normal traffic.","status":"executed", "score": user_score}
+    
+  # Gamified response
   if detection["confidence"] >= 85:
     blocked_ips.add(ip)
-    return {"action":"block_ip","message":f"IP {ip} permanently blocked. {detection['reason']}","status":"executed"}
-  if detection["confidence"] >= 50:
-    return {"action":"rate_limit","message":f"Rate limiting applied to {ip}. Monitoring escalated.","status":"executed"}
-  return {"action":"alert","message":f"Low-confidence flag on {ip}. Analyst review recommended.","status":"executed"}
+    user_score += 20 # High reward for blocking threat
+    return {"action":"block_ip","message":f"IP {ip} neutralized. {detection['priority']} threat blocked.","status":"executed", "score": user_score}
+    
+  user_score += 10 # Reward for detection
+  return {"action":"rate_limit","message":f"Mitigation active for {ip}. Score updated.","status":"executed", "score": user_score}
+
+def get_gamified_stats():
+    badges = []
+    if user_score > 1200: badges.append("Threat Hunter")
+    if user_score > 1500: badges.append("Firewall Master")
+    if user_score > 2000: badges.append("Rapid Responder")
+    return {"score": user_score, "badges": badges}

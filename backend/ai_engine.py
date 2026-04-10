@@ -40,10 +40,22 @@ def _offline_aria_reply(user_message: str, context: dict = None) -> str:
     if any(k in text for k in ["hello", "hi", "who are you", "what are you"]):
         return "I am ARIA, the WarRoomX Tactical Intelligence Agent. I am monitoring all multi-agent ingress/egress points and providing real-time neural oversight."
 
-    if any(k in text for k in ["analyze", "status", "whats happening", "check", "report"]):
+    if any(k in text for k in ["analyze", "status", "whats happening", "check", "report", "health"]):
         return (
-            f"STRATEGIC_REPORT: WarRoomX is under sustained pressure. Current metrics: {total} events processed with {threats} high-fidelity intercepts. "
+            f"STRATEGIC_REPORT: WarRoomX is operational. Current metrics: {total} events processed with {threats} high-fidelity intercepts. "
             f"Autonomous mitigation has quarantined {blocked} primary threat vectors. System state: DEFENSIVE_ALPHA."
+        )
+
+    if any(k in text for k in ["show blocked", "who is blocked", "blocked ips"]):
+        return (
+            f"ACCESS_CONTROL_QUERY: I am currently maintaining a zero-trust blackhole for {blocked} unique IP addresses. "
+            "These nodes exhibited > 85% confidence threat signatures. Permanent egress blocking is active."
+        )
+
+    if any(k in text for k in ["highest risk", "who is dangerous", "threat list"]):
+        return (
+            "RISK_ANALYTICS: The highest risk IPs currently show SQL Injection attempts originating from the Eastern European and Asian clusters. "
+            "Risk scores for these nodes are currently pegged at 92/100."
         )
 
     if any(k in text for k in ["block", "protect", "defense", "stop"]):
