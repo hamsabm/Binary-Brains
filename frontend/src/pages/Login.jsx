@@ -42,6 +42,10 @@ const Login = () => {
       const data = await response.json();
       if (response.ok) {
         localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('username', username);
+        // Simple role parsing for demo (real version uses jwt decode)
+        const role = username === 'admin' ? 'admin' : 'user';
+        localStorage.setItem('role', role);
         navigate('/dashboard');
       } else {
         setError(data.detail || 'Access Denied: Invalid Authentication Credentials');

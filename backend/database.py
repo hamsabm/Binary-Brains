@@ -44,6 +44,16 @@ responses = Table(
     Column("timestamp", String),
 )
 
+user_activity = Table(
+    "user_activity",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("username", String),
+    Column("action", String),
+    Column("details", String),
+    Column("timestamp", DateTime, default=datetime.datetime.utcnow),
+)
+
 def init_db():
     metadata.create_all(engine)
 
@@ -120,3 +130,15 @@ def get_stats():
             "sql_count": sql_count or 0,
             "brute_count": brute_count or 0
         }
+
+def log_user_activity(username: str, action: str, details: str = ""):
+    with engine.connect() as conn:
+        stmt = insert(user_activity).values(username=username, action=action, details=details)
+        conn.execute(stmt)
+        conn.commit()
+
+def get_all_activity(limit=100):
+    with engine.connect() as conn:
+        query = select(user_activity).order_by(desc(user_activity.c.id)).limit(limit)
+        result = conn.execute(query)
+        return [dict(row._mapping) for row in result]

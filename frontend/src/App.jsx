@@ -8,7 +8,8 @@ import Assistant from './pages/Assistant';
 import ThreatGlobe from './pages/ThreatGlobe';
 import Game from './pages/Game';
 import MultiplayerGame from './pages/MultiplayerGame';
-import { ShieldCheck, Activity, Globe, Target, Cpu, Lock, Swords, Users, Sword } from 'lucide-react';
+import AdminActivity from './pages/AdminActivity';
+import { ShieldCheck, Activity, Globe, Target, Cpu, Lock, Swords, Users, Sword, ClipboardList } from 'lucide-react';
 
 const BG_MAIN = "#050a14";
 const BG_CARD = "#0b1220";
@@ -42,9 +43,10 @@ const ProtectedRoute = ({ children }) => {
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = window.location.pathname;
+  const role = localStorage.getItem('role');
 
   const handleLogout = () => {
-    localStorage.removeItem("access_token");
+    localStorage.clear();
     navigate("/login");
   };
 
@@ -65,11 +67,19 @@ const Sidebar = () => {
         <NavBtn label="Live Stream" to="/live" active={location === '/live'} icon={<Globe size={18}/>} />
         <NavBtn label="Neural Hub" to="/threat-globe" active={location === '/threat-globe'} icon={<Target size={18}/>} />
         <NavBtn label="AI Assistant" to="/assistant" active={location === '/assistant'} icon={<Cpu size={18}/>} />
+        
         <div className="pt-6 border-t border-white/5 space-y-4">
            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest pl-6">Engagement Deck</span>
            <NavBtn label="Combat: Single" to="/game" active={location === '/game'} icon={<Sword size={18}/>} />
            <NavBtn label="Combat: PvP" to="/game/multiplayer" active={location === '/game/multiplayer'} icon={<Users size={18}/>} />
         </div>
+
+        {role === 'admin' && (
+          <div className="pt-6 border-t border-white/5 space-y-4">
+            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest pl-6">Governance Hub</span>
+            <NavBtn label="Audit Logs" to="/admin/activity" active={location === '/admin/activity'} icon={<ClipboardList size={18}/>} />
+          </div>
+        )}
       </nav>
 
       <div className="pt-8 border-t border-white/5">
@@ -151,6 +161,12 @@ function App() {
         <Route path="/game/multiplayer" element={
           <ProtectedRoute>
             <MultiplayerGame />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin/activity" element={
+          <ProtectedRoute>
+            <Layout><AdminActivity /></Layout>
           </ProtectedRoute>
         } />
         

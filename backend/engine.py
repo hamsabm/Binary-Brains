@@ -109,6 +109,17 @@ def generate_attack() -> dict:
       "lat": location["lat"], "lng": location["lng"], "country": location["country"]
   }
 
+def generate_log(attack: dict) -> dict:
+    """Standardizes raw attack data into a formal SOC log entry."""
+    return {
+        "log_id": str(uuid.uuid4()),
+        "timestamp": attack["timestamp"],
+        "ip": attack["ip"],
+        "attack_type": attack["attack_type"],
+        "event": f"Critical security event: {attack['type']} attempt using payload: {attack['payload']}",
+        "country": attack["country"]
+    }
+
 def calculate_risk(ip: str, detection: dict) -> dict:
     """Advanced Dynamic Risk Scoring"""
     ip_score = min(100, ip_attempt_count.get(ip, 0) * 15)

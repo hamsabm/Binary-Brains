@@ -92,15 +92,26 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-USERS_DB = {"admin": auth.hash_password("cyberwar123")}
+# Expanded User DB with Roles
+USERS_DB = {
+    "admin": {"pw": auth.hash_password("cyberwar123"), "role": "admin"},
+    "analyst": {"pw": auth.hash_password("analyst123"), "role": "user"}
+}
 
 @app.post("/auth/login", response_model=schemas.TokenResponse)
 async def login(req: schemas.LoginRequest):
     if req.username not in USERS_DB:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    if not auth.verify_password(req.password, USERS_DB[req.username]):
+    
+    user_data = USERS_DB[req.username]
+    if not auth.verify_password(req.password, user_data["pw"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = auth.create_access_token(data={"sub": req.username})
+    
+    token = auth.create_access_token(data={"sub": req.username, "role": user_data["role"]})
+    
+    # Log the login event
+    database.log_user_activity(req.username, "LOGIN", f"Access granted as {user_data['role']}")
+    
     return schemas.TokenResponse(access_token=token)
 
 @app.get("/simulate/full_cycle")
@@ -137,12 +148,14 @@ async def toggle_simulation(active: bool, current_user: str = Depends(auth.get_c
 async def start_sim_endpoint(current_user: str = Depends(auth.get_current_user)):
     global simulation_active
     simulation_active = True
+    database.log_user_activity(current_user, "SIM_START", "Manual simulation trigger")
     return {"status": "started"}
 
 @app.post("/simulate/stop")
 async def stop_sim_endpoint(current_user: str = Depends(auth.get_current_user)):
     global simulation_active
     simulation_active = False
+    database.log_user_activity(current_user, "SIM_STOP", "Manual simulation halt")
     return {"status": "stopped"}
 
 # --- PRIMARY BROADCAST WEBSOCKET ---
@@ -196,10 +209,21 @@ async def game_websocket(websocket: WebSocket, room_id: str, player_id: str = Qu
             if not game_manager.game_manager.rooms[room_id]["players"]:
                 del game_manager.game_manager.rooms[room_id]
 
+@app.get("/admin/activity")
+async def get_activity(current_user: str = Depends(auth.get_current_user)):
+    # Simple role check for demo
+    if current_user != "admin":
+        raise HTTPException(status_code=403, detail="Admin protocol required")
+    return database.get_all_activity()
+
 @app.post("/game/action")
-async def register_action(room_id: str, player_id: str, action: str, attack_id: str):
+async def register_action(room_id: str, player_id: str, action: str, attack_id: str, current_user: str = Depends(auth.get_current_user)):
     result = game_manager.game_manager.process_action(room_id, player_id, action, attack_id)
     if not result: raise HTTPException(status_code=400, detail="Invalid action or attack expired")
+    
+    # Log game action
+    database.log_user_activity(current_user, "GAME_ACTION", f"Action: {action} | Result: {result['is_correct']}")
+    
     return result
 
 if __name__ == "__main__":
