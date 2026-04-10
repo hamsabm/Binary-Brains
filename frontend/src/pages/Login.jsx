@@ -5,7 +5,7 @@ import { Shield, Lock, User, ChevronRight, Activity, Zap } from 'lucide-react';
 const Login = () => {
   const navigate = useNavigate();
   const [isRegister, setIsRegister] = useState(false);
-  const [username, setUsername] = useState('user1');
+  const [username, setUsername] = useState('user@cyber.com');
   const [password, setPassword] = useState('user123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -18,6 +18,7 @@ const Login = () => {
     setSuccess('');
 
     const endpoint = isRegister ? '/auth/register' : '/auth/login';
+    // Ensure we hit the correct port
     const baseUrl = `http://127.0.0.1:8000${endpoint}`;
 
     try {
@@ -31,7 +32,7 @@ const Login = () => {
       
       if (response.ok) {
         if (isRegister) {
-            setSuccess('Identity Provisioned. Re-authenticating...');
+            setSuccess('Neural Provisioning Success. Authenticators Loaded.');
             setTimeout(() => {
                 setIsRegister(false);
                 setSuccess('');
@@ -39,15 +40,15 @@ const Login = () => {
         } else {
             localStorage.setItem('access_token', data.access_token);
             localStorage.setItem('username', username);
-            const role = username.toLowerCase() === 'admin' ? 'admin' : 'user';
+            const role = username.includes('admin') ? 'admin' : 'user';
             localStorage.setItem('role', role);
             navigate('/dashboard');
         }
       } else {
-        setError(data.detail || 'Access Denied: Authentication Failure');
+        setError(data.detail || 'Tactical Rejected: Identity Mismatch');
       }
     } catch (err) {
-      setError('Tactical Node Failed: Remote connection refused');
+      setError('Tactical Node Offline: Remote link failed [Port 8000]');
     } finally {
       setLoading(false);
     }

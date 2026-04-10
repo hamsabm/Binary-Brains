@@ -1,6 +1,6 @@
 import datetime
 import os
-from sqlalchemy import create_all, create_engine, MetaData, Table, Column, Integer, String, DateTime, Float, JSON, insert, select, func
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime, Float, JSON, insert, select, func
 from sqlalchemy.orm import sessionmaker
 
 DB_URL = "sqlite:///./war_room.db"

@@ -4,7 +4,7 @@ from services import auth
 
 router = APIRouter()
 
-@app.post("/register")
+@router.post("/register")
 async def register(req: schemas.LoginRequest):
     if database.get_user_by_email(req.username): # Note: frontend sends email as username in common login patterns
         raise HTTPException(status_code=400, detail="Identity ID already registered")
@@ -14,7 +14,7 @@ async def register(req: schemas.LoginRequest):
     database.log_user_activity(req.username, "REGISTER", "Neural identity self-provisioned")
     return {"status": "identity_created"}
 
-@app.post("/login", response_model=schemas.TokenResponse)
+@router.post("/login", response_model=schemas.TokenResponse)
 async def login(req: schemas.LoginRequest):
     user_data = database.get_user_by_email(req.username)
     if not user_data:
